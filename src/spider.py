@@ -1,6 +1,8 @@
 import os, re, sqlite3, sys; sys.path.insert(0, os.path.join("..", ".."))
 from datetime import date
 from pattern.web import Spider, DEPTH, BREADTH, FIFO, LIFO
+from pattern.web import URL, plaintext
+from django.utils.encoding import smart_str, smart_unicode
 
 class SQLiteSpider(Spider):
     
@@ -18,7 +20,12 @@ class SQLiteSpider(Spider):
             c.execute("INSERT INTO news VALUES(?,?,?,?)", (title, str(article_date), link.url, content))
             conn.commit()
             conn.close()
+            s = URL(link.url).download()
+            content = plaintext(s,linebreaks=2, indentation = True)
+            encodedContent=smart_str(content)
             print "Date:", article_date, "\nTitle:", title, "\nUrl:", link.url, "\n\n"
+            print "Content:\n",encodedContent
+            print "----------------------------------------------------------------------------------------------"
 
     def fail(self, link):
         print "failed:", link.url,"\n"
