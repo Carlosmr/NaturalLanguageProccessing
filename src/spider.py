@@ -14,15 +14,14 @@ class SQLiteSpider(Spider):
 #             Por ahora coge el titulo de la url, pero seguramente es mejor cogerlo del HTML
             title = splitted_url[6].split('_')[0]
 #             TODO
-            content = ''
+            s = URL(link.url).download()
+            content = plaintext(s,linebreaks=2, indentation = True)
+            encodedContent=smart_str(content)
             conn = sqlite3.connect('news.db')
             c = conn.cursor()
             c.execute("INSERT INTO news VALUES(?,?,?,?)", (title, str(article_date), link.url, content))
             conn.commit()
             conn.close()
-            s = URL(link.url).download()
-            content = plaintext(s,linebreaks=2, indentation = True)
-            encodedContent=smart_str(content)
             print "Date:", article_date, "\nTitle:", title, "\nUrl:", link.url, "\n\n"
             print "Content:\n",encodedContent
             print "----------------------------------------------------------------------------------------------"
