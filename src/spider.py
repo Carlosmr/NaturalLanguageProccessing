@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 import os, re, sqlite3, sys; sys.path.insert(0, os.path.join("..", ".."))
 from datetime import date
 from pattern.web import Spider, DEPTH, BREADTH, FIFO, LIFO, URL,plaintext,DOM
 from django.utils.encoding import smart_str, smart_unicode
+from whooshSearcher import *
 
 class SQLiteSpider(Spider):
     
@@ -20,7 +22,7 @@ class SQLiteSpider(Spider):
                 content = str(plainText)
                 filterContent = content.strip().lower()
                 if filterContent != 'share your comment:':
-                    result = result + content + '\n'
+                    result = result + plainText + '\n '
                     
         pretty = unicode(result.strip())
         return pretty
@@ -35,6 +37,7 @@ class SQLiteSpider(Spider):
             title = splitted_url[6].split('_')[0]
 #            Parseo el html dejando unicamente el contenido de la noticia
             encodedContent = self.htmlParser(link.url)
+            whoosh.addDocument(title,link.url,encodedContent)
             conn = sqlite3.connect('news.db')
             c = conn.cursor()
             c.execute("INSERT INTO news VALUES(?,?,?,?)", (title, str(article_date), link.url, encodedContent))
@@ -61,6 +64,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS news (title text, date text, url text, c
 conn.commit()
 conn.close()
 
+whoosh = whooshSearcher(True)
 spider = SQLiteSpider(links=["http://www.huffingtonpost.co.uk/"], domains=["huffingtonpost.co.uk"], delay=0.0)
 
 while True:
