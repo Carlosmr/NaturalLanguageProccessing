@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 import os, re, sqlite3, sys; sys.path.insert(0, os.path.join("..", ".."))
-from datetime import date
+from datetime import datetime
 from pattern.web import Spider, DEPTH, BREADTH, FIFO, LIFO, URL,plaintext,DOM
 from django.utils.encoding import smart_str, smart_unicode
 from whooshSearcher import *
 
-class SQLiteSpider(Spider):
+class WhooshSpider(Spider):
+    
+    def __init__(self, links, domains, delay, whoosh):
+        Spider.__init__(self, links=links, domains=domains, delay=delay)
+        self.whoosh=whoosh
     
     def htmlParser(self,link):
         html = URL(link).download()
@@ -32,17 +36,10 @@ class SQLiteSpider(Spider):
         match = re.search("huffingtonpost.co.uk/\d{4}/\d{2}/\d{2}/", link.url)
         if match:
             splitted_url = link.url.split('/')
-            article_date = date(int(splitted_url[3]), int(splitted_url[4]), int(splitted_url[5]))
-#             Por ahora coge el titulo de la url, pero seguramente es mejor cogerlo del HTML
+            article_date = datetime.datetime(int(splitted_url[3]), int(splitted_url[4]), int(splitted_url[5]))
             title = splitted_url[6].split('_')[0]
-#            Parseo el html dejando unicamente el contenido de la noticia
             encodedContent = self.htmlParser(link.url)
-            whoosh.addDocument(title,link.url,encodedContent)
-            conn = sqlite3.connect('news.db')
-            c = conn.cursor()
-            c.execute("INSERT INTO news VALUES(?,?,?,?)", (title, str(article_date), link.url, encodedContent))
-            conn.commit()
-            conn.close()
+            self.whoosh.addDocument(title, link.url, article_date, encodedContent)
             print "Date:", article_date, "\nTitle:", title, "\nUrl:", link.url, "\n\n"
             print "Content:\n",encodedContent
             print "----------------------------------------------------------------------------------------------"
@@ -56,16 +53,3 @@ class SQLiteSpider(Spider):
             return Spider.priority(self, link, method)
         else:
             return 0.0
-
-
-conn = sqlite3.connect('news.db')
-c = conn.cursor()
-c.execute('''CREATE TABLE IF NOT EXISTS news (title text, date text, url text, content text)''')
-conn.commit()
-conn.close()
-
-whoosh = whooshSearcher(True)
-spider = SQLiteSpider(links=["http://www.huffingtonpost.co.uk/"], domains=["huffingtonpost.co.uk"], delay=0.0)
-
-while True:
-    spider.crawl(cached=False)
